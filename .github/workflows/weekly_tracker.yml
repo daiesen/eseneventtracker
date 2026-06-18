@@ -2,7 +2,7 @@ name: Weekly Charity Events Tracker
 
 on:
   schedule:
-    - cron: '0 9 * * 5' # Automatically wakes up every Friday at 9:00 AM UTC
+    - cron: '30 9 * * 3' # Wakes up every Wednesday at 9:30 AM UTC (10:30 AM BST)
   workflow_dispatch: # Puts a manual "Run now" button inside your GitHub control panel
 
 jobs:
