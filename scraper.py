@@ -89,6 +89,7 @@ URLS = {
     "Sports Pathway Group": "https://www.sportspathwaygroup.com/events/",
     "Gymcatch App Provider 8024": "https://gymcatch.com/app/provider/8024/events",
     "EVOC Eventbrite": "https://www.eventbrite.co.uk/o/evoc-17285339281"
+    "Tribe Porty": "https://www.eventbrite.co.uk/o/tribe-porty-8010157332"
 }
 
 HISTORY_FILE = "history.json"
