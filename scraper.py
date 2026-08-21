@@ -132,6 +132,9 @@ URLS = {
     "Black Professionals UK" : "https://blackprofessionals.uk/events/",
     "The Salisbury Centre" : "https://www.salisburycentre.org/events/month/",
     "School for Social Entrepreneurs" : "https://www.the-sse.org/learning-support/explore-all-programmes-workshops/",
+    "Aerial Art House" : "https://www.aerialarthouse.com/taster-classes.html",
+    "Aerial Art House" : "https://aerial-art-house.classforkids.io/",
+    
     
     
 
