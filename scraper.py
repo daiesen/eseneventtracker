@@ -14,7 +14,7 @@ URLS = {
     "Access Parkour": "https://www.accessparkour.co.uk/classes-kMYv3",
     "Adelphe Connect": "https://www.adelpheconnect.co.uk/events/",
     "Aerial Art House": "https://www.aerialarthouse.com/timetable.html",
-    "Aerial Dance": "https://www.aerialdance.co.uk/events/",
+    "All or Nothing Aerial Dance": "https://www.aerialdance.co.uk/events/",
     "Art and Spirituality": "https://art-and-spirituality.cademy.io/",
     "Google Form Sign-up": "https://docs.google.com/forms/d/e/1FAIpQLSctrLiOKcYadoO3OpfkfV6t_Dl8sPRool1HUbAyI8PDd7m6qQ/viewform",
     "Beetroots Collective": "https://www.eventbrite.co.uk/o/beetroots-collective-cic-75415648863",
@@ -88,8 +88,42 @@ URLS = {
     "St Columba's Hospice": "https://stcolumbashospice.org.uk/events/?category=hospice-events#events-filter",
     "Sports Pathway Group": "https://www.sportspathwaygroup.com/events/",
     "Gymcatch App Provider 8024": "https://gymcatch.com/app/provider/8024/events",
-    "EVOC Eventbrite": "https://www.eventbrite.co.uk/o/evoc-17285339281"
-    "Tribe Porty": "https://www.eventbrite.co.uk/o/tribe-porty-8010157332"
+    "EVOC Eventbrite": "https://www.eventbrite.co.uk/o/evoc-17285339281",
+    "Tribe Porty": "https://www.eventbrite.co.uk/o/tribe-porty-8010157332",
+    "Pianodrome" : "https://www.pianodrome.org/whats-on",
+    "The Compassion Salon" : "https://www.compassionsalon.com/",
+    "ECCAN" : "https://www.eccan.scot/events-list",
+    "Art Buds Collective" : "https://bookwhen.com/artbudsclasses/e/ev-scawg-20260904140000",
+    "North Merchiston Club" : "https://www.northmerchiston.co.uk/event-list",
+    "North Merchiston Club" : "https://www.northmerchiston.co.uk/services-9",
+    "North Merchiston Club" : "https://www.northmerchiston.co.uk/services-9-1",
+    "North Merchiston Club" : "https://www.northmerchiston.co.uk/health-wellbeing",
+    "The Jester" : "https://www.outsavvy.com/organiser/the-jester-fundraisers1",
+    "Reclibrate Together CIC" : "https://app.ubindi.com/Mark.Smith.Recalibrate.Together.CIC",
+    "Hot Messs Productions" : "https://www.eventbrite.com/o/121171348315?_gl=1*1ta4gkf*_up*MQ..*_ga*MTY5MTE1Mjk1LjE3ODczMDQyMjQ.*_ga_TQVES5V6SH*czE3ODczMDQyMjMkbzEkZzAkdDE3ODczMDQyMjMkajYwJGwwJGgw",
+    "Edinburgh Strength Collective" : "http://edinburghstrength.co.uk/ssg",
+    "Edinburgh Strength Collective" : "https://www.edinburghstrength.co.uk/everyday-strong",
+    "Corvidaeum Creative" : "https://corvidaeumcreative.co.uk/events/",
+    "Corvidaeum Creative" : "https://events.humanitix.com/host/corvidaeum-creative",
+    "Rosemains Steading" : "https://www.rosemains.co.uk/event-markets",
+    "Grassmarket Community Project" : "https://grassmarket.org/whats-on/",
+    "Young Womens Movement" : "https://youngwomenscot.org/get-involved/events/",
+    "Martha M Coaching" : "https://events.humanitix.com/host/martha-m-coaching-martha-mattos-coelho",
+    "Cultural Commons" : "https://events.cultural-commons.org/",
+    "Flexible Working Scotland" : "https://www.flexibleworkingscotland.co.uk/events",
+    "Leith Comedy Festival" : "https://www.leithcomedyfest.com/",
+    "Adelphe Connect" : "https://www.adelpheconnect.co.uk/events/",
+    "Leith Theatre" : "https://www.leiththeatre.co.uk/upcoming-events",
+    "Blast Boxing" : "https://www.blastboxingedinburgh.com/",
+    "Welcome Brain" : "https://www.welcomebrain.com/neurodiversity-first-responder-training",
+    "Remode Collective" : "https://remode-collective.live.baluu.co.uk/timetable",
+    "School for Social Entrepreneurs" : "https://www.the-sse.org/learning-support/explore-all-programmes-workshops/",
+    "Scot Art" : "https://www.scot-art.co.uk/whatson/exhibitions/",
+    "Scot Art" : "https://www.scot-art.co.uk/whatson/workshops/",
+    
+    
+
+
 }
 
 HISTORY_FILE = "history.json"
