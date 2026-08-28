@@ -1,97 +1,126 @@
-import csv
-import io
+import json
+import re
 import urllib.request
 from html.parser import HTMLParser
+from urllib.parse import urljoin
+
+
+SOURCE_URL = "https://www.bridgendfarmhouse.org.uk/whats-on"
 
 
 class EventParser(HTMLParser):
-    def __init__(self):
+    def __init__(self, source_url):
         super().__init__()
+        self.source_url = source_url
         self.events = []
 
-        self.current_event = None
-        self.current_link = None
-        self.current_text = []
-
         self.in_heading = False
+        self.in_link = False
         self.in_paragraph = False
+
+        self.current_heading = ""
+        self.current_link = ""
+        self.current_paragraph = ""
+
+        self.current_event = None
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
 
-        if tag in ("h1", "h2", "h3"):
+        if tag in ("h1", "h2", "h3", "h4"):
             self.in_heading = True
-            self.current_text = []
+            self.current_heading = ""
+
+        elif tag == "a":
+            self.in_link = True
+            href = attrs.get("href", "")
+
+            if href:
+                self.current_link = urljoin(self.source_url, href)
 
         elif tag == "p":
             self.in_paragraph = True
-            self.current_text = []
-
-        elif tag == "a" and "href" in attrs:
-            self.current_link = attrs["href"]
+            self.current_paragraph = ""
 
     def handle_data(self, data):
-        text = data.strip()
+        text = " ".join(data.split())
 
         if not text:
             return
 
-        if self.in_heading or self.in_paragraph:
-            self.current_text.append(text)
+        if self.in_heading:
+            self.current_heading += " " + text
+
+        if self.in_paragraph:
+            self.current_paragraph += " " + text
 
     def handle_endtag(self, tag):
-        text = " ".join(self.current_text).strip()
 
-        if tag in ("h1", "h2", "h3"):
+        if tag in ("h1", "h2", "h3", "h4"):
             self.in_heading = False
 
-            if text:
+            heading = self.current_heading.strip()
+
+            if heading:
                 self.current_event = {
-                    "event_name": text,
-                    "date": "",
-                    "start_time": "",
-                    "end_time": "",
+                    "event_name": heading,
+                    "event_url": "",
                     "description": "",
-                    "event_url": self.current_link or "",
+                    "source_url": self.source_url,
                 }
 
         elif tag == "p":
             self.in_paragraph = False
 
-            if self.current_event and text:
-                self.current_event["description"] = text
+            paragraph = self.current_paragraph.strip()
 
-                self.events.append(self.current_event)
-                self.current_event = None
+            if self.current_event and paragraph:
+                self.current_event["description"] = paragraph
 
-        self.current_text = []
+        elif tag == "a":
+            self.in_link = False
+
+            if self.current_event and self.current_link:
+                if not self.current_event["event_url"]:
+                    self.current_event["event_url"] = self.current_link
+
+        self.current_heading = ""
+        self.current_paragraph = ""
 
 
-def scrape_page(url):
+def download_page(url):
     print(f"Downloading: {url}")
 
     request = urllib.request.Request(
         url,
         headers={
             "User-Agent": "Mozilla/5.0"
-        }
+        },
     )
 
     with urllib.request.urlopen(request) as response:
-        html = response.read().decode("utf-8")
+        return response.read().decode("utf-8")
 
-    parser = EventParser()
+
+def scrape_page(url):
+    html = download_page(url)
+
+    parser = EventParser(url)
     parser.feed(html)
 
     return parser.events
 
 
 if __name__ == "__main__":
-    url = "https://www.bridgendfarmhouse.org.uk/whats-on"
+    events = scrape_page(SOURCE_URL)
 
-    events = scrape_page(url)
+    print()
+    print("=" * 60)
+    print(f"Found {len(events)} possible event records")
+    print("=" * 60)
+    print()
 
-    print(f"\nFound {len(events)} possible events.\n")
-
-    for event in events:
-        print(event)
+    for number, event in enumerate(events, start=1):
+        print(f"EVENT {number}")
+        print(json.dumps(event, indent=2, ensure_ascii=False))
+        print()
