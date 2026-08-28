@@ -25,9 +25,6 @@ jobs:
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: python scraper.py
-      
-            - name: Test Google Sheet connection
-        run: python test_google_sheet.py
 
     - name: Update History Log Changes
       run: |
