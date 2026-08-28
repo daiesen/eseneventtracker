@@ -1,4 +1,4 @@
-name: Test Google Sheet
+name: TEST - Google Sheet Connection
 
 on:
   workflow_dispatch:
