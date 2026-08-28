@@ -26,9 +26,6 @@ jobs:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: python scraper.py
 
-            - name: Test Bridgend generic scraper
-        run: python scrapers/generic.py
-
     - name: Update History Log Changes
       run: |
         git config --global user.name "Automated Event Bot"
