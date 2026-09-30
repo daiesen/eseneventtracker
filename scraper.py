@@ -134,6 +134,7 @@ URLS = {
     "School for Social Entrepreneurs" : "https://www.the-sse.org/learning-support/explore-all-programmes-workshops/",
     "Aerial Art House" : "https://www.aerialarthouse.com/taster-classes.html",
     "Aerial Art House" : "https://aerial-art-house.classforkids.io/",
+    "Edinburgh Old Town Development Trust" : "https://communityscreeningsep.eventive.org/schedule?filterVenues%5B69eb8f528b0c5c090792dfb3%5D=true",
     
     
     
