@@ -1,0 +1,5 @@
+crawl4ai
+trafilatura
+beautifulsoup4
+gspread
+oauth2client
