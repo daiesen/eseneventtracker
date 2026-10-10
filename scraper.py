@@ -289,6 +289,30 @@ def scrape_job_board():
 
     print("Scraper execution process completed successfully.")
 
+    # Force alignment for file writing
+    try:
+        with open("active_jobs_social.txt", "w", encoding="utf-8") as sf:
+            for job in unique_scraped_jobs:
+                sf.write(f"Organisation Name\n{job['org']}\n\n")
+                sf.write(f"Job Title (Closing Day/Month)\n{job['title']} ({job['date']})\n\n")
+                sf.write(f"Organisation biography\n{job['bio']}\n")
+                sf.write("="*40 + "\n\n")
+        print("Generated active_jobs_social.txt successfully.")
+    except Exception as e:
+        print(f"Social file error: {e}")
+
+    try:
+        with open("active_jobs_website.txt", "w", encoding="utf-8") as wf:
+            for job in unique_scraped_jobs:
+                wf.write(f"{job['org']} - {job['title']} ({job['date']}) - [Apply Here]({job['link']})\n\n")
+                wf.write(f"{job['bio']}\n")
+                wf.write("-"*40 + "\n\n")
+        print("Generated active_jobs_website.txt successfully.")
+    except Exception as e:
+        print(f"Website file error: {e}")
+
+    print("Scraper execution process completed successfully.")
+
 if __name__ == "__main__":
     scrape_job_board()
 
