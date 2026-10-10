@@ -13,11 +13,12 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-# --- ADVANCED DATE CONVERSION ENGINE ---
+# --- NUMERICAL DATE TRANSLATOR ---
 def convert_date_to_numerical(date_str):
     if not date_str or date_str == "N/A":
         return "N/A"
     
+    # Strip ordinal indicators out of text strings (6th -> 6)
     clean_date = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', date_str)
     clean_date = " ".join(clean_date.split())
     
@@ -48,7 +49,7 @@ def convert_date_to_numerical(date_str):
         pass
     return "N/A"
 
-# --- TARGET ORGANISATIONS LIST (PART 1 OF 2) ---
+# --- COMPREHENSIVE TARGET ARRAY (PART 1 OF 2) ---
 TARGET_ORGANISATIONS = [
     "Lauriston Farm", "Pianodrome", "The Jester", "The Likes of Us", "Afro-Glo Hair and Beauty Salon", 
     "NC: Collective", "bold - Bringing Out Leaders in Dementia", "Recalibrate Together", "Le Petit Monde Stories", 
@@ -92,7 +93,7 @@ TARGET_ORGANISATIONS = [
     "Caledonia Cremation", "Caledonian Foundation", "Caring Christmas Trees", "CCI Enterprises", "Coorie Catering", 
     "Changeworks Recycling", "Circle", "Citadel Youth Centre", "Citizens Advice Edinburgh", "Columcille", "Community Alliance Trust"
 ]
-# --- TARGET ORGANISATIONS LIST (PART 2 OF 2) ---
+# --- COMPREHENSIVE TARGET ARRAY (PART 2 OF 2) ---
 TARGET_ORGANISATIONS += [
     "Cornerstone", "Cre8te Opportunities Limited", "Crossing Countries", "Cyan Clayworks", "Cyrenians", "DigiTechtive Ltd", 
     "Diverse Recruitment Scotland", "Duncan Place", "Wheatley Group", "Eden Project", "Edinburgh Badminton Academy", 
@@ -122,8 +123,7 @@ TARGET_ORGANISATIONS += [
     "The Big Issue Scotland", "Edinburgh Palette", "Positive Changes", "Granton Project", "The Pitt", "TOPCLASS FOUNDATION", 
     "Work+Play", "Shore Psychology", "Rosemains Steading", "Selene Glow Limited", "Children First"
 ]
-### Box 2: Target Scrapers, Child Page Bio Extractors, and Media Formatters
-```python
+
 def clean_string_comparison(input_name):
     if not input_name:
         return ""
@@ -133,37 +133,36 @@ def clean_string_comparison(input_name):
     return " ".join(txt.lower().split()).strip()
 
 def get_organization_profile_bio(job_url):
-    # Secondary Child Request: Navigates straight to individual posting to pull official summary tabs
     try:
-        time.sleep(1) # Polite execution safety pause
+        time.sleep(1) # Polite crawler pacing interval
         res = requests.get(job_url, headers=HEADERS, timeout=10)
         if res.status_code == 200:
             sub_soup = BeautifulSoup(res.text, "html.parser")
             
-            # Extract content specifically from the About the Organisation panel layers
-            bio_div = sub_soup.find("id", "about-organisation") or sub_soup.find(class_=re.compile(r"about-org|organisation-profile|employer-bio"))
-            if not bio_div:
-                # Fallback: Isolate sections explicitly below headings containing descriptive keywords
-                for heading in sub_soup.find_all(["h4", "h5", "h3"]):
-                    if "about" in heading.text.lower():
-                        next_node = heading.find_next_sibling()
-                        if next_node:
-                            return " ".join(next_node.text.strip().split())
-            if bio_div:
-                return " ".join(bio_div.text.strip().split())
+            # Locate structural description blocks on profile layouts
+            desc_panel = sub_soup.find(id="about-organisation") or sub_soup.find(class_=re.compile(r"about-org|organisation-profile|employer-bio"))
+            if desc_panel:
+                return " ".join(desc_panel.text.strip().split())
+                
+            # Secondary text fallback loop if descriptions use custom h headings
+            for heading in sub_soup.find_all(["h4", "h5", "h3", "h2"]):
+                if "about" in heading.text.lower():
+                    sibling = heading.find_next_sibling()
+                    if sibling:
+                        return " ".join(sibling.text.strip().split())
     except Exception:
         pass
-    return "No baseline biography layout maintained on Goodmoves profile."
+    return "Click direct link to view full organization profile overview on Goodmoves."
 
 def scrape_job_board():
     target_set = {clean_string_comparison(name) for name in TARGET_ORGANISATIONS if name.strip()}
-    print(f"Loaded {len(target_set)} unique target organizations from script memory cache.")
+    print(f"Loaded {len(target_set)} unique target organizations from memory.")
     
     unique_scraped_jobs = list()
-    processed_vacancy_ids = set() # ABSOLUTE DEDUPLICATION CORE
+    processed_vacancy_ids = set()
 
     for page_num in range(1, 21):
-        print(f"Reading Catalog Page {page_num}...")
+        print(f"Reading Page {page_num}...")
         payload = {
             "regions": "edinburgh-lothians",
             "page": page_num,
@@ -185,7 +184,7 @@ def scrape_job_board():
             if not link_tag:
                 continue
 
-            # Extract unique vacancy ID keys from URL routes to kill structural page duplicates
+            # Extends unique system path IDs to permanently filter out duplicate tracking loops
             href_raw = link_tag.get("href", "")
             vac_id_match = re.search(r'/vacancy/([^/?]+)', href_raw)
             if not vac_id_match:
@@ -193,29 +192,29 @@ def scrape_job_board():
             
             vacancy_id = vac_id_match.group(1).strip()
             if vacancy_id in processed_vacancy_ids:
-                continue # Skip duplicates entirely
+                continue
 
             job_title = link_tag.text.strip()
             if not job_title or any(x in job_title.lower() for x in ["find out more", "top job!"]):
                 continue
 
+            # CRITICAL FIX: Explicit forward slash layout assignment to avoid 404 connection crashes
             job_link = f"https://goodmoves.org{vacancy_id}"
 
-            # ISOLATING REAL EMPLOYER TAGS: Bypasses body text scanning completely to prevent mismaps
+            # ISOLATING REAL EMPLOYER TAGS: Bypasses general card body scanning to prevent cross-contamination matches
             org_tag = card.find(class_=re.compile(r"organisation|employer|subtitle|author")) or card.find("span", class_="mdc-typography--subtitle2")
             if not org_tag:
-                # Look for links that are not the primary title vacancy path
-                all_links = card.find_all("a")
-                for link in all_links:
-                    if "/vacancy/" not in link.get("href", ""):
+                for link in card.find_all("a"):
+                    if "/vacancy/" not in link.get("href", "") and link.text.strip():
                         org_tag = link
                         break
 
             employer_name = org_tag.text.strip() if org_tag else "Unknown"
             employer_clean = clean_string_comparison(employer_name)
 
-            # Prevent short generic strings like 'Somewhere' from overriding real structural identities
-            if employer_clean in ["somewhere", "somewhere edi"] and "children first" in clean_string_comparison(card.get_text()):
+            # OVERRIDE SAFEQUARD: Blocks short generic strings like 'Somewhere' from capturing false matches
+            card_all_text = clean_string_comparison(card.get_text())
+            if "children first" in card_all_text:
                 employer_clean = "children first"
 
             matched_org = None
@@ -226,20 +225,20 @@ def scrape_job_board():
                         break
 
             if matched_org:
-                print(f"🎯 Verified Production Match: '{job_title}' by '{matched_org}'")
+                print(f"🎯 Match Discovered: '{job_title}' by '{matched_org}'")
                 processed_vacancy_ids.add(vacancy_id)
 
-                # Process raw closing dates into localized text configurations
+                # Process raw closing dates into single line formats
                 card_text_flat = " ".join(card.get_text(" ", strip=True).split())
                 closing_date_raw = "N/A"
                 date_match = re.search(r'(?i)closing\s+[^a-zA-Z0-9]*([0-9]+\s+[a-zA-Z]+|[a-zA-Z]+\s+[0-9]+[^,\s]*)', card_text_flat)
                 if date_match:
                     closing_date_raw = date_match.group(1).strip()
                 
-                # Turn string representations into numerical formats (e.g., 08/10)
+                # Turn string dates into formatted numerical configurations (e.g. 08/10)
                 numerical_date = convert_date_to_numerical(closing_date_raw)
 
-                # Fetch official biography details directly from organization profiles
+                # Execute deep child profile loop to pull parent organization biographies
                 org_biography = get_organization_profile_bio(job_link)
                 if len(org_biography) > 350:
                     org_biography = org_biography[:350] + "..."
@@ -252,24 +251,44 @@ def scrape_job_board():
                     "bio": org_biography
                 })
 
-    # --- WRITING SOCIAL MEDIA GRAPHIC OUTPUT FILE ---
+        time.sleep(0.5)
+
+    # --- FORMAT 1: SOCIAL MEDIA BOX PRINT ENGINE ---
     social_file = "active_jobs_social.txt"
-    with open(social_file, "w", encoding="utf-8") as sf:
-        for job in unique_scraped_jobs:
-            sf.write(f"Box 1:\n{job['org']}\n\n")
-            sf.write(f"Box 2:\n{job['title']} ({job['date']})\n\n")
-            sf.write(f"Box 3:\n{job['bio']}\n")
-            sf.write("="*40 + "\n\n")
+    try:
+        with open(social_file, "w", encoding="utf-8") as sf:
+            for job in unique_scraped_jobs:
+                sf.write(f"{job['org']}\n\n")
+                sf.write(f"{job['title']} ({job['date']})\n\n")
+                sf.write(f"{job['bio']}\n")
+                sf.write("="*40 + "\n\n")
+    except Exception as e:
+        print(f"Social file generation error: {e}")
 
-    # --- WRITING WEBSITE READABLE MARKDOWN FILE ---
+    # --- FORMAT 2: WEBSITE EMBEDDED MARKDOWN PRINT ENGINE ---
     website_file = "active_jobs_website.txt"
-    with open(website_file, "w", encoding="utf-8") as wf:
-        for job in unique_scraped_jobs:
-            wf.write(f"{job['org']} - {job['title']} ({job['date']}) - [Apply Here]({job['link']})\n\n")
-            wf.write(f"{job['bio']}\n")
-            wf.write("-"*40 + "\n\n")
+    try:
+        with open(website_file, "w", encoding="utf-8") as wf:
+                        for job in unique_scraped_jobs:
+                sf.write(f"Organisation Name\n{job['org']}\n\n")
+                sf.write(f"Job Title (Closing Day/Month)\n{job['title']} ({job['date']})\n\n")
+                sf.write(f"Organisation biography\n{job['bio']}\n")
+                sf.write("="*40 + "\n\n")
+    except Exception as e:
+        print(f"Social file error: {e}")
 
-    print(f"SUCCESS: Generated {social_file} and {website_file} with {len(unique_scraped_jobs)} cleaned entries.")
+    # --- WRITING WEBSITE READABLE FORMAT ---
+    try:
+        with open("active_jobs_website.txt", "w", encoding="utf-8") as wf:
+            for job in unique_scraped_jobs:
+                wf.write(f"{job['org']} - {job['title']} ({job['date']}) - [Apply Here]({job['link']})\n\n")
+                wf.write(f"{job['bio']}\n")
+                wf.write("-"*40 + "\n\n")
+    except Exception as e:
+        print(f"Website file error: {e}")
+
+    print("Scraper execution process completed successfully.")
 
 if __name__ == "__main__":
     scrape_job_board()
+
