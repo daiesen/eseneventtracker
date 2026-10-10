@@ -1,12 +1,12 @@
-name: Weekly Charity Events Tracker
+name: Weekly Goodmoves Tracker
 
 on:
   schedule:
-    - cron: '30 9 * * 3' # Wakes up every Wednesday at 9:30 AM UTC (10:30 AM BST)
-  workflow_dispatch: # Puts a manual "Run now" button inside your GitHub control panel
+    - cron: '0 16 * * 5'
+  workflow_dispatch:
 
 jobs:
-  run-tracker:
+  run-scraper:
     runs-on: ubuntu-latest
     steps:
     - name: Access Code Repository
@@ -21,27 +21,23 @@ jobs:
       run: |
         pip install requests beautifulsoup4
 
-    - name: Process Websites and Extract Events
-      env:
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      run: python scraper.py
-
-    - name: Update History Log Changes
+    - name: Run Scraper Script
       run: |
-        git config --global user.name "Automated Event Bot"
-        git config --global user.email "bot@charity-events.internal"
-        git add history.json
-        git commit -m "Update tracking snapshots [skip ci]" || echo "No site changes observed"
-        git push
+        echo "=== DEBUGGING: SHOWING CURRENT SCRAPER.PY CONTENTS ==="
+        cat scraper.py
+        echo "=== END OF DEBUGGING ==="
+        python scraper.py
 
-    - name: Deliver Weekly Summary Email
-      uses: dawidd6/action-send-mail@v3
+    - name: Commit and Push Results File
+      run: |
+        git config --global user.name "Goodmoves Scraper Bot"
+        git config --global user.email "bot@goodmoves.org"
+        git add active_jobs.csv
+        git diff-index --quiet HEAD || git commit -m "Automated active job results sync [skip ci]"
+        git push || echo "No changes to push"
+
+    - name: Upload Results Asset
+      uses: actions/upload-artifact@v4
       with:
-        server_address: smtp.gmail.com
-        server_port: 465
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: "Weekly Scraped Events Summary"
-        to: ${{ secrets.RECIPIENT_EMAIL }}
-        from: "Automated Charity Tracker"
-        body: file://weekly_summary.md
+        name: Active_Goodmoves_Postings
+        path: active_jobs.csv
