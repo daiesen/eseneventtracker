@@ -1,244 +1,183 @@
-import os
-import json
+import time
+import re
+import csv
+import sys
+from datetime import datetime
 import requests
-import datetime
 from bs4 import BeautifulSoup
 
-# The complete list of 80 charity/community event URLs to track
-URLS = {
-    "Edinburgh Printmakers": "https://edinburghprintmakers.co.uk/events/",
-    "Bridgend Farmhouse": "https://www.bridgendfarmhouse.org.uk/whats-on",
-    "180 Degrees Consulting Edinburgh": "https://www.180dcedinburgh.com/public-upcoming-events",
-    "Think Circus": "https://thinkcircus.co.uk/book/",
-    "3 Theatre": "https://www.3theatre.com/weeklyclasses",
-    "Access Parkour": "https://www.accessparkour.co.uk/classes-kMYv3",
-    "Adelphe Connect": "https://www.adelpheconnect.co.uk/events/",
-    "Aerial Art House": "https://www.aerialarthouse.com/timetable.html",
-    "All or Nothing Aerial Dance": "https://www.aerialdance.co.uk/events/",
-    "Art and Spirituality": "https://art-and-spirituality.cademy.io/",
-    "Google Form Sign-up": "https://docs.google.com/forms/d/e/1FAIpQLSctrLiOKcYadoO3OpfkfV6t_Dl8sPRool1HUbAyI8PDd7m6qQ/viewform",
-    "Beetroots Collective": "https://www.eventbrite.co.uk/o/beetroots-collective-cic-75415648863",
-    "Blast Boxing Edinburgh": "https://www.blastboxingedinburgh.com/",
-    "Black Professionals UK": "https://blackprofessionals.uk/events/",
-    "Be United": "https://be-united.org.uk/events/",
-    "Bright Red Triangle": "https://www.brightredtriangle.co.uk/events",
-    "Changeworks": "https://www.changeworks.org.uk/events/",
-    "Coin Operated Press": "https://www.coinoperatedpress.com/events-calendar",
-    "Corvidaeum Creative": "https://www.eventbrite.co.uk/o/corvidaeum-creative-limited-120958871315",
-    "Creative Arts Therapies Space (Upcoming)": "https://www.creativeartstherapiesspace.org/upcoming-events",
-    "Creative Arts Therapies Space (Humanitix)": "https://events.humanitix.com/host/creative-arts-therapies-space-cic",
-    "Cyan Clayworks": "https://cyanclayworks.co/cyanclayworks/short-courses/",
-    "Cyber Fraud Centre Scotland": "https://cyberfraudcentre.com/event-location/scotland",
-    "Cyrenians Fundraising": "https://cyrenians.scot/events/fundraising-events",
-    "Dunedinfencingclub": "https://dunedinfencingclub.square.site/events-and-shop",
-    "Duncan Place": "https://duncanplace.org/whats-on2/",
-    "Eden Project Communities": "https://www.tickettailor.com/events/edenprojectcommunities",
-    "Edinburgh Blues": "https://www.universe.com/users/edinburgh-blues-club-5VCQBS",
-    "Edinburgh Chamber": "https://www.edinburghchamber.co.uk/events/",
-    "Edinburgh Community Food": "https://www.edinburghcommunityfood.org.uk/Pages/Events/",
-    "ECY Social Prescribing": "https://bookwhen.com/ecy-tags-social-prescribing#focus=ev-sf1u-20200921120000",
-    "Edinburgh Development Film Charter": "https://edfoc.org.uk/event-board/",
-    "Edinburgh Forge": "https://edinburghforge.com/events/",
-    "EOTDT Activities": "https://www.eotdt.org/activities/",
-    "Edinburgh Open Workshop": "https://www.edinburghopenworkshop.co.uk/news/",
-    "Fountainbridge Canalside Community Trust": "https://www.eventbrite.co.uk/o/fountainbridge-canalside-community-trust-53071164743",
-    "Goodies Charity": "https://www.goodiescharity.org/whats-on/",
-    "Grassmarket Community Picture House": "https://www.eventbrite.co.uk/o/grassmarket-community-picture-house-14379817006",
-    "Heart of Newhaven Activity": "https://www.heartofnewhaven.co.uk/activity",
-    "Heart of Newhaven Events": "https://www.heartofnewhaven.co.uk/events-1",
-    "Hameish Arts CIC": "https://www.tickettailor.com/events/hameishartscic",
-    "Eventbrite Host 121171348315": "https://www.eventbrite.com/o/121171348315?_gl=1*ysyk40*_up*MQ..*_ga*NTkzNzA4NDE3LjE3NzkyNzU4NjE.*_ga_TQVES5V6SH*czE3NzkyNzU4NTkkbzEkZzAkdDE3NzkyNzU4NTkkajYwJGwwJGgw",
-    "Into Work": "https://intowork.org.uk/events/",
-    "Kin Collective": "https://kincollective.org/whats-on/",
-    "Lavender Menace": "https://lavendermenace.org.uk/events",
-    "LifeCare Edinburgh": "https://www.lifecare-edinburgh.org.uk/lifecare-events/",
-    "MHScot Network Meetings": "https://www.mentalhealthscot.land/mhscot-network-meetings/",
-    "Norton Park": "https://events.humanitix.com/host/norton-park",
-    "One World Shop Blog": "https://www.oneworldshop.co.uk/blog/",
-    "Shore Psychology": "https://www.shorepsychology.co.uk/whats-on/",
-    "Eventbrite Host 108506659751": "https://www.eventbrite.co.uk/o/108506659751?_gl=1*174tq5y*_up*MQ..*_ga*MTM1Nzc1MjM1MC4xNzc5Mjc2ODMw*_ga_TQVES5V6SH*czE3NzkyNzY4MjkkbzEkZzAkdDE3NzkyNzY4MjkkajYwJGwwJGgw",
-    "SHRUB Coop": "https://www.shrubcoop.org/shrubevents",
-    "TechLink Innovations": "https://techlinkinnovations.com/events/",
-    "The Bike Station": "https://www.thebikestation.org.uk/events",
-    "The Bongo Club": "https://www.thebongoclub.co.uk/events-main/events-coming-up/",
-    "My Edinburgh News Events": "https://myedinburgh.org/news/#events",
-    "Edinburgh Tool Library": "https://events.humanitix.com/host/edinburghtoollibrary",
-    "Eric Liddell Centre": "https://ericliddell.org/whats-on/",
-    "The Melting Pot Nexudus": "https://themeltingpot.spaces.nexudus.com/events?&v=latest",
-    "The Pitt": "https://thepitt.co.uk/events/",
-    "Edinburgh Remakery": "https://www.eventbrite.co.uk/o/edinburgh-remakery-52941865943",
-    "Tiphereth Calendar": "https://www.tiphereth.org.uk/events",
-    "Transition Edinburgh South": "https://www.transitionedinburghsouth.org.uk/events-in-april-2026/",
-    "Tribe Porty": "https://tribeporty.org/events/",
-    "Upmo News": "https://www.upmo.org/news/",
-    "Volunteer Edinburgh": "https://www.volunteeredinburgh.org.uk/training-and-events/",
-    "WithInsight Coaching": "https://www.tickettailor.com/events/withinsightcoachingandtraining",
-    "Work Plus Play Hub": "https://workplusplayhub.com/events",
-    "Out of the Blue Categories": "https://www.outoftheblue.org.uk/event-categories",
-    "Pilot Light": "https://www.pilotlight.org.uk/events?_gl=1*mq0gmp*_up*MQ..*_ga*MjY4OTg3OTIuMTc3OTI4MDQwOA..*_ga_CN0GJRKMSM*czE3NzkyODA0MDckbzEkZzEkdDE3NzkyODA0MTYkajUxJGwwJGgw",
-    "Planning Aid Scotland": "https://www.eventbrite.co.uk/o/planning-aid-scotland-114580068081",
-    "Queer Yoga Edinburgh": "https://www.eventbrite.com/o/queer-yoga-edinburgh-56031130473",
-    "ReMode Collective Baluu": "https://remode-collective.live.baluu.co.uk/events",
-    "Rhyze Mushrooms": "https://www.eventbrite.co.uk/o/rhyze-mushrooms-edinburgh-42549142583",
-    "Rosemains Markets": "https://www.rosemains.co.uk/event-markets",
-    "Sanitree Events": "https://www.sanitree.org/events-2-1",
-    "Scottish Storytelling Centre": "https://scottishstorytellingcentre.online.red61.co.uk/",
-    "Community Foundation Planetary Healing": "https://www.tickettailor.com/events/communityfoundationforplanetaryhealing/2173411",
-    "Social Investment Scotland": "https://www.socialinvestmentscotland.com/support/upcoming-events-and-webinars/",
-    "St Columba's Hospice": "https://stcolumbashospice.org.uk/events/?category=hospice-events#events-filter",
-    "Sports Pathway Group": "https://www.sportspathwaygroup.com/events/",
-    "Gymcatch App Provider 8024": "https://gymcatch.com/app/provider/8024/events",
-    "EVOC Eventbrite": "https://www.eventbrite.co.uk/o/evoc-17285339281",
-    "Tribe Porty": "https://www.eventbrite.co.uk/o/tribe-porty-8010157332",
-    "Pianodrome" : "https://www.pianodrome.org/whats-on",
-    "The Compassion Salon" : "https://www.compassionsalon.com/",
-    "ECCAN" : "https://www.eccan.scot/events-list",
-    "Art Buds Collective" : "https://bookwhen.com/artbudsclasses/e/ev-scawg-20260904140000",
-    "North Merchiston Club" : "https://www.northmerchiston.co.uk/event-list",
-    "North Merchiston Club" : "https://www.northmerchiston.co.uk/services-9",
-    "North Merchiston Club" : "https://www.northmerchiston.co.uk/services-9-1",
-    "North Merchiston Club" : "https://www.northmerchiston.co.uk/health-wellbeing",
-    "The Jester" : "https://www.outsavvy.com/organiser/the-jester-fundraisers1",
-    "Reclibrate Together CIC" : "https://app.ubindi.com/Mark.Smith.Recalibrate.Together.CIC",
-    "Hot Messs Productions" : "https://www.eventbrite.com/o/121171348315?_gl=1*1ta4gkf*_up*MQ..*_ga*MTY5MTE1Mjk1LjE3ODczMDQyMjQ.*_ga_TQVES5V6SH*czE3ODczMDQyMjMkbzEkZzAkdDE3ODczMDQyMjMkajYwJGwwJGgw",
-    "Edinburgh Strength Collective" : "http://edinburghstrength.co.uk/ssg",
-    "Edinburgh Strength Collective" : "https://www.edinburghstrength.co.uk/everyday-strong",
-    "Corvidaeum Creative" : "https://corvidaeumcreative.co.uk/events/",
-    "Corvidaeum Creative" : "https://events.humanitix.com/host/corvidaeum-creative",
-    "Rosemains Steading" : "https://www.rosemains.co.uk/event-markets",
-    "Grassmarket Community Project" : "https://grassmarket.org/whats-on/",
-    "Young Womens Movement" : "https://youngwomenscot.org/get-involved/events/",
-    "Martha M Coaching" : "https://events.humanitix.com/host/martha-m-coaching-martha-mattos-coelho",
-    "Cultural Commons" : "https://events.cultural-commons.org/",
-    "Flexible Working Scotland" : "https://www.flexibleworkingscotland.co.uk/events",
-    "Leith Comedy Festival" : "https://www.leithcomedyfest.com/",
-    "Adelphe Connect" : "https://www.adelpheconnect.co.uk/events/",
-    "Leith Theatre" : "https://www.leiththeatre.co.uk/upcoming-events",
-    "Blast Boxing" : "https://www.blastboxingedinburgh.com/",
-    "Welcome Brain" : "https://www.welcomebrain.com/neurodiversity-first-responder-training",
-    "Remode Collective" : "https://remode-collective.live.baluu.co.uk/timetable",
-    "School for Social Entrepreneurs" : "https://www.the-sse.org/learning-support/explore-all-programmes-workshops/",
-    "Scot Art" : "https://www.scot-art.co.uk/whatson/exhibitions/",
-    "Scot Art" : "https://www.scot-art.co.uk/whatson/workshops/",
-    "Edinburgh Festival of Cycling" : "https://edfoc.org.uk/event-board/",
-    "MHScot" : "https://www.mentalhealthscot.land/mhscot-network-meetings/",
-    "Fathers Network Scotland" : "https://www.fathersnetwork.org.uk/events_and_training",
-    "Four Square" : "https://www.foursquare.org.uk/events-and-appeals/",
-    "Multi Cultural Family Base" : "https://mcfb.org.uk/events/",
-    "Fresh Stat" : "https://www.freshstartweb.org.uk/get-involved/events",
-    "Edinburgh Old Town Devlopment Trust" : "https://www.eotdt.org/activities/",
-    "Active Inquiry" : "https://www.eventbrite.co.uk/o/3497134775?_gl=1*1k2yoif*_up*MQ..*_ga*MTYxODIzNTQxOC4xNzg3MzEzOTA5*_ga_TQVES5V6SH*czE3ODczMTM5MDgkbzEkZzAkdDE3ODczMTM5MDgkajYwJGwwJGgw",
-    "Pregnancy and Parents Centre" : "https://www.pregnancyandparents.org.uk/events",
-    "Black Professionals UK" : "https://blackprofessionals.uk/events/",
-    "The Salisbury Centre" : "https://www.salisburycentre.org/events/month/",
-    "School for Social Entrepreneurs" : "https://www.the-sse.org/learning-support/explore-all-programmes-workshops/",
-    "Aerial Art House" : "https://www.aerialarthouse.com/taster-classes.html",
-    "Aerial Art House" : "https://aerial-art-house.classforkids.io/",
-    "Edinburgh Old Town Development Trust" : "https://communityscreeningsep.eventive.org/schedule?filterVenues%5B69eb8f528b0c5c090792dfb3%5D=true",
-    
-    
-    
-
-
+# --- CONFIGURATION (TOTAL REWRITE - NO GOOGLE SHEETS) ---
+BASE_SEARCH_URL = "https://goodmoves.org"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-HISTORY_FILE = "history.json"
-OUTPUT_FILE = "weekly_summary.md"
+# --- YOUR COMPLETED 348 TARGET ORGANISATIONS ---
+TARGET_ORGANISATIONS = [
+    "Lauriston Farm", "Pianodrome", "The Jester", "The Likes of Us", "Afro-Glo Hair and Beauty Salon", 
+    "NC: Collective", "bold - Bringing Out Leaders in Dementia", "Recalibrate Together", "Le Petit Monde Stories", 
+    "The Compassion Salon", "North Merchiston Club", "Edinburgh Communities Climate Action Network", "ECCAN", 
+    "Art Buds Collective", "Four Square Park Café", "Queen Margaret University Edinburgh", "Flexible Working Scotland", 
+    "TrusteeConnect", "Vahanomy Ltd", "RiverRescues Animal Sanctuary", "The RIAS", "TechLink Innovations", 
+    "The Royal Incorporation of Architects in Scotland", "Rosemains Steading", "Shore Psychology", "Katie Adams Coaching", 
+    "The Challenges Group", "The Black Box Approach", "The Village Bistro", "Neuroinclusive Works", "Change Please", 
+    "WanderWomen", "St Columba's Hospice", "Heart of Newhaven", "Data Harmonise", "Leith Comedy Festival", "RKubed", 
+    "Beautify Earth", "Cou Caravaca Design", "Youdom Suya", "Boroughmuir High School", "The Pitt", "BLAST Boxing", 
+    "SoberBuzz Scotland", "Passion4Social", "Welcome Brain Consulting", "Datakirk", "180 Degrees Edinburgh", 
+    "Edinburgh Student Housing Co-operative", "media co-op", "Vilo Sky", "Marketing for Good", "Sanitree", 
+    "Coin-Operated Press", "Social Investment Scotland", "Changeworks", "GoodCall", "Venturing Out", "Seedling", 
+    "Music Broth", "Unlabelled Films", "Change Mental Health", "Abandoned Artists", "Let's Talk Young People", 
+    "Universal Truth", "Dance House Scotland", "EWP", "The Edinburgh Wheels Project", "Bikes for Refugees", 
+    "Edinburgh Yoga and Sports Therapy", "Rhyze Mushrooms", "Lavender Menace Queer Books Archive", "Ceilidh Crew 'n Co", 
+    "Prosper Social Finance", "University of Edinburgh", "Exhibitability", "Fair Trade Co", "CADi", 
+    "Edinburgh Strength Collectivel", "Homeshare Scotland", "BuildU Scotland", "Aerial Art House", "Hot Mess Productions", 
+    "The Young Womens Movement", "Access Parkour", "Door in the Wall Arts Access", "Viva Life CIC", "Cultural Commons", 
+    "Humanitix", "Selene Glow", "Bright Red Triangle at Napier University", "Newin", "Liminale", "Forgotten Edges", 
+    "Root to Rise Freedom Foundation", "Stepping Stones North Edinburgh", "Withinsight LTD", "Seeing The Now", 
+    "Transition Edinburgh South", "Beetroots Collective CIC", "Hive Mind Speaks", "The Safe Place", "In My Neighbourhood", 
+    "Anne Phillips Limited", "Mhor Outdoor", "Heartsong Live", "The Ripple Project", "Cyber & Fraud Centre Scotland", 
+    "Planning Aid Scotland", "The Ampersand Project", "ScotArt", "Edinburgh Community Yoga", "Street Fit Scotland", 
+    "The Skelf Bike Park", "Space Artworks", "Transform Scotland", "Four Square", "St Judes Laundry", "Create Business Properties", 
+    "Community Enterprise", "Space at Broomhouse Hub", "Fountainbridge Canalside Community Trust", "Black Professionals United Kingdom", 
+    "Willow Den", "Into Work", "Edinburgh Open Workshop", "The Salisbury Centre", "Treasure Tree", "Queer Yoga Edinburgh", 
+    "The Therapy Programme", "Corvidaeum Creative", "Edinburgh Library of Things", "Tidyscot", "Adelphe Connect", 
+    "Edinburgh Printmakers", "Work+Play Hub", "Martha M Coaching", "CIEE Edinburgh: Study Abroad Charity", "Tophat Discovery", 
+    "Linknet Mentoring", "Scran Academy", "The Eric Liddell Community", "Hame-ish", "Goodies", "&Parents", "PurpleByte", 
+    "Shandon Publishing", "All or Nothing Aerial Dance Theatre", "Visual Literacy Matters", "Creative Arts Therapies Space", 
+    "Studio Lutalica", "Communication Inclusion People", "Norton Park Business and Conference Centre", "Edinburgh Chamber of Commerce", 
+    "Coorie Kitchen", "House of Jack", "The Green Team", "IntelliDigest", "Art and Spirituality", "Adhart", "ArtyFarty Art", 
+    "Code Division", "Dunedin Fencing Club", "Cargo Bike Movement", "Evolution Swim School", "Edinburgh Food Social", "EcoArt", 
+    "Axé Boom Boom", "Infohubme", "Hive Music Therapy", "Fathers Network Scotland", "Kin Collective", "EALA Impacts", 
+    "Brave Strong Beautiful", "Bridgend Farmhouse", "People Know How", "Locavore", "little living room", "Santosa Wellness Centre", 
+    "Scottish Communities Finance", "Mind Be Kind", "The Very Inclusive Play Club", "The Mindful Enterprise", "The Leith Collective", 
+    "The Edinburgh Collective", "Wee Chance", "The Wee Retreat", "Spartans Community Foundation", "3Theatre", "Access Media", 
+    "ACTive INquiry", "All Cleaned Up", "All Together Edinburgh", "Assist Social Capital", "Balerno Village Trust", "Bare Branding", 
+    "BE United", "Best Bib n Tucker", "Bike For Good", "Blossom Wellbeing", "Bold Studio", "Breadshare", "Bro Enterprise", 
+    "Caledonia Cremation", "Caledonian Foundation", "Caring Christmas Trees", "CCI Enterprises", "Coorie Catering", 
+    "Changeworks Recycling", "Circle", "Citadel Youth Centre", "Citizens Advice Edinburgh", "Columcille", "Community Alliance Trust", 
+    "Cornerstone", "Cre8te Opportunities Limited", "Crossing Countries", "Cyan Clayworks", "Cyrenians", "DigiTechtive Ltd", 
+    "Diverse Recruitment Scotland", "Duncan Place", "Wheatley Group", "Eden Project", "Edinburgh Badminton Academy", 
+    "Edinburgh Blues Club", "Edinburgh Community Food", "Edinburgh Festival of Cycling Ltd", "Edinburgh Forge CIC", 
+    "Edinburgh Furniture Initiative", "Edinburgh Old Town Development Trust", "The Crannie", "Equal Exchange", 
+    "Falkirk Vineyard Church (Eden Jewellery)", "Fearlessly", "Shaw Trust", "Fresh Start", "FreshSight", "Awards Plus", 
+    "Geotourist", "Glasgow Centre for Inclusive Living", "Chocolates & Grace", "Grassmarket Community Project", 
+    "Greyfriars Charteris Centre", "Hadeel Ltd", "Health by Science", "Heathers", "Hoda Productions Ltd", "Impact Arts", 
+    "Invisible Cities", "JASS – Junior Award Scheme for Schools", "Just Festival", "Life Care – Cafe Life", 
+    "Life Care – Help at Home", "Lingo Flamingo", "Link Group Ltd", "Lister Housing Co-operative Ltd", "Love Gorgie", 
+    "McSence", "Media Education", "MHScot Workplace Wellbeing", "Move On Wood", "Multi-Cultural Family Base", "My Adventure", 
+    "One World Shop", "Out of the Blue Arts and Educational Trust", "Pass It On", "Pilotlight", "Edinburgh Watersports", 
+    "Potential in Me", "Pregnancy and Parents Centre", "Harbour", "Real Talk", "Remode Collective", "Resolve", 
+    "ReUnion Canal Boats", "Rowan Alba", "Saheliya", "School for Social Entrepreneurs", "Scottish Love in Action", 
+    "Scottish Storytelling Centre / The Story Cafe", "Shrub Cooperative", "Sikh Sanjog", "Silver Stag CIC", 
+    "Social Enterprise Academy", "Social Print and Copy", "Social Stories Club", "Somewhere EDI", "Sports Pathway Group", 
+    "T-UK Skills & Workforce Development", "Tap Into IT Where You Are", "The Big Issue", "The Bike Station", "The Bongo Club", 
+    "The Crags Centre", "We Play Together", "The Edinburgh Remakery", "The Edinburgh Tool Library", "The Graphics Coop", 
+    "The Melting Pot", "The Shaw Trust", "Siamsoir Irish Dance Village", "The Yard", "Think Circus", "Tiphereth Trading Ltd", 
+    "Transform Creative", "Tribe Porty", "Volunteer Edinburgh", "WHALE Arts", "YOU CAN COOK", "The Young Women's Movement", 
+    "Edible Estates", "Lifecare", "LocalMotive Markets", "Upmo", "Keystone Women", "Norton Park", "YWCA Scotland", "CCI", 
+    "Cornerstone Developments Ltd", "Mhor Outdoor Ltd", "Somewhere", "South West Edible Estates", "ArtyFarty Art CIC", 
+    "Little Livingroom Ltd", "Edinburgh Wellness and Sports Therapy", "Edinburgh EquiLearn", "Access Parkour Ltd", 
+    "Caring Christmas Trees - Bethany Christian Trust", "Space - The Broomhouse Hub", "Hoda Productions", "Active Inquiry", 
+    "My Adventure Edinburgh", "The Siamsoir Academy", "Dunedin Canmore Foundation", "Forth Sector Development", 
+    "Quay Community Improvements", "Link Group HA", "Resolve Scotland", "Port Edgar Watersports", "Braidwood Bike Park", 
+    "The Big Issue Scotland", "Edinburgh Palette", "Positive Changes", "Granton Project", "The Pitt", "TOPCLASS FOUNDATION", 
+    "Work+Play", "Shore Psychology", "Rosemains Steading", "Selene Glow Limited"
+]
+def clean_string_comparison(input_name):
+    if not input_name:
+        return ""
+    txt = input_name.replace("(", " ").replace(")", " ").replace(".", " ").replace(",", " ").replace("-", " ")
+    for word in ["ltd", "limited", "trust", "association", "group", "scotland", "LTD", "LIMITED", "TRUST", "ASSOCIATION", "GROUP", "SCOTLAND"]:
+        txt = txt.replace(word, " ")
+    return " ".join(txt.lower().split()).strip()
 
-def fetch_page_text(url):
+def scrape_job_board():
+    target_set = {clean_string_comparison(name) for name in TARGET_ORGANISATIONS if name.strip()}
+    print(f"Loaded {len(target_set)} unique target organizations from memory.")
+    print("Beginning fresh search data scan on Goodmoves...")
+    
+    new_rows_to_append = list()
+
+    for page_num in range(1, 21):
+        print(f"Reading Page {page_num}...")
+        payload = {
+            "regions": "edinburgh-lothians",
+            "page": page_num,
+            "sort": "newest"
+        }
+
+        try:
+            response = requests.get(BASE_SEARCH_URL + "/search", headers=HEADERS, params=payload, timeout=10)
+            if response.status_code != 200:
+                break
+        except Exception:
+            break
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        cards = soup.find_all(class_=re.compile(r"search-result|mdc-card")) or soup.find_all("div")
+
+        for card in cards:
+            link_tag = card.find("a", href=re.compile(r"/vacancy/"))
+            if not link_tag:
+                continue
+
+            job_title = link_tag.text.strip()
+            if not job_title or any(x in job_title.lower() for x in ["find out more", "top job!"]):
+                continue
+
+            href = link_tag.get("href", "")
+            job_link = href if href.startswith("http") else f"https://goodmoves.org{href}"
+
+            card_text = card.get_text(" ", strip=True)
+            card_clean = clean_string_comparison(card_text)
+
+            matched_org = None
+            for original_target in TARGET_ORGANISATIONS:
+                target_clean = clean_string_comparison(original_target)
+                if target_clean and target_clean in card_clean:
+                    matched_org = original_target
+                    break
+
+            if matched_org:
+                print(f"🎯 Match Discovered: '{job_title}' by '{matched_org}'")
+
+                closing_date = "N/A"
+                date_match = re.search(r'(?i)closing\s+(\d+\w*\s+\w+|\w+\s+\d+)', card_text)
+                if date_match:
+                    closing_date = date_match.group(0).strip()
+
+                org_bio = "Click link to view job details."
+                snippet_div = card.find(class_=re.compile(r"snippet|description|body"))
+                if snippet_div:
+                    org_bio = snippet_div.text.strip()
+                if len(org_bio) > 300:
+                    org_bio = org_bio[:300] + "..."
+
+                new_row = [matched_org, job_title, closing_date, job_link, org_bio]
+                if new_row not in new_rows_to_append:
+                    new_rows_to_append.append(new_row)
+
+        time.sleep(1)
+
+    # Local file execution write layer
+    csv_file = "active_jobs.csv"
     try:
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        response = requests.get(url, headers=headers, timeout=15)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Strip noisy elements
-        for el in soup(["script", "style", "nav", "footer", "header", "iframe"]):
-            el.extract()
-            
-        text = " ".join(soup.get_text().split())
-        return text[:8000] # Safe token limit
+        with open(csv_file, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Organisation Name", "Job Title", "Closing Date", "Direct Link", "Organisation Biography"])
+            writer.writerows(new_rows_to_append)
+        print(f"SUCCESS: Compiled {len(new_rows_to_append)} live jobs into {csv_file}")
     except Exception as e:
-        return f"Error fetching site content: {str(e)}"
+        print(f"Failed to generate local output file: {e}")
 
-def format_with_gemini(site_name, site_url, old_text, new_text):
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return ""
-    
-    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-    
-    prompt = f"""
-    You are a tracking assistant for an Edinburgh charity events newsletter. 
-    Compare the OLD text scraped last week with the NEW text scraped this week from the website "{site_name}".
-    Identify any newly added upcoming events that were NOT listed in the OLD text. 
-
-    If there are real new events added, format each one strictly using this EXACT structure:
-    DD.MM - [Organisation Name] - [Event Title] - [Organisation Name] - [Learn More]([URL])
-
-    Rules for fields:
-    - DD.MM: The date of the event in day.month format (e.g., 28.06). If the year is 2026, still output DD.MM. If date is completely missing, write "TBC".
-    - [Organisation Name]: Use "{site_name}".
-    - [Event Title]: Clean name of the event.
-    - The end must explicitly be written as - [Learn More]([URL]) using the precise URL provided below.
-
-    Example of expected format:
-    28.06 - {site_name} - Social Sunday - {site_name} - [Learn More]({site_url})
-
-    If no brand-new events have been added, or if only formatting/cookies/dates of the scraper changed, reply with only the exact phrase: "No new events".
-
-    OLD WEEK TEXT:
-    {old_text}
-
-    NEW WEEK TEXT:
-    {new_text}
-    """
-
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    
-    try:
-        res = requests.post(endpoint, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
-        data = res.json()
-        ai_response = data['candidates'][0]['content']['parts'][0]['text'].strip()
-        if "No new events" in ai_response:
-            return ""
-        return ai_response
-    except Exception:
-        return ""
-
-def main():
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, "r") as f:
-            history = json.load(f)
-    else:
-        history = {}
-
-    current_history = {}
-    new_additions = []
-
-    for name, url in URLS.items():
-        print(f"Scraping: {name}...")
-        new_text = fetch_page_text(url)
-        old_text = history.get(name, "")
-
-        # Always save current text for next check
-        current_history[name] = new_text
-
-        # If we have past data and text changed, pass to Free Gemini API to extract details
-        if old_text and old_text != new_text:
-            formatted_events = format_with_gemini(name, url, old_text, new_text)
-            if formatted_events:
-                new_additions.append(formatted_events)
-
-    # Save tracking history state back to GitHub repo
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(current_history, f, indent=4)
-
-    # Compile the final weekly summary document
-    with open(OUTPUT_FILE, "w") as f:
-        if new_additions:
-            f.write("\n".join(new_additions))
-        else:
-            f.write("No brand new events discovered this week across monitored channels.")
+    print("\n" + "="*50)
+    print("📋 SCRAPED DATA SUMMARY IN CSV FORMAT")
+    print("="*50)
+    writer = csv.writer(sys.stdout, delimiter='\t')
+    writer.writerow(["Organisation Name", "Job Title", "Closing Date", "Direct Link", "Organisation Biography"])
+    for job in new_rows_to_append:
+        writer.writerow(job)
+    print("="*50 + "\n")
 
 if __name__ == "__main__":
-    main()
+    scrape_job_board()
