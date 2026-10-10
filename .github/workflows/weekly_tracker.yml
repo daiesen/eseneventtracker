@@ -28,16 +28,23 @@ jobs:
         echo "=== END OF DEBUGGING ==="
         python scraper.py
 
-    - name: Commit and Push Results File
+        - name: Commit and Push Results File
       run: |
         git config --global user.name "Goodmoves Scraper Bot"
         git config --global user.email "bot@goodmoves.org"
-        git add active_jobs.csv
+        git add active_jobs_social.txt active_jobs_website.txt
         git diff-index --quiet HEAD || git commit -m "Automated active job results sync [skip ci]"
         git push || echo "No changes to push"
 
-    - name: Upload Results Asset
+    - name: Upload Social Summary Asset
       uses: actions/upload-artifact@v4
       with:
-        name: Active_Goodmoves_Postings
-        path: active_jobs.csv
+        name: Social_Media_Formatted_Boxes
+        path: active_jobs_social.txt
+
+    - name: Upload Website Summary Asset
+      uses: actions/upload-artifact@v4
+      with:
+        name: Website_Formatted_Layouts
+        path: active_jobs_website.txt
+
