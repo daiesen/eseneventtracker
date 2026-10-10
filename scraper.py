@@ -123,7 +123,7 @@ def get_profile_bio(url):
     return "Profile overview available on the Goodmoves vacancy portal."
 
 def scrape_job_board():
-    t_set = {clean_string_comparison(n) for name in TARGET_ORGANISATIONS if n.strip()}
+       t_set = {clean_string_comparison(name) for name in TARGET_ORGANISATIONS if name.strip()}
     jobs, seen_ids = list(), set()
 
     for page in range(1, 21):
@@ -162,7 +162,7 @@ def scrape_job_board():
             if "children first" in clean_string_comparison(card.get_text()): emp_clean = "children first"
 
             if emp_clean in t_set:
-                matched = next(o for o in TARGET_ORGANISATIONS if clean_string_comparison(o) == emp_clean)
+            matched = next(o for o in TARGET_ORGANISATIONS if clean_string_comparison(o) == emp_clean)
                 print(f"🎯 Match: '{title}' by '{matched}'")
                 seen_ids.add(v_id)
 
