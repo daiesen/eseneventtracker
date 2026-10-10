@@ -33,6 +33,7 @@ def convert_date_to_numerical(date_str):
         pass
     return "N/A"
 
+# --- TARGET ORGANISATIONS LIST (PART 1 OF 2) ---
 TARGET_ORGANISATIONS = [
     "Lauriston Farm", "Pianodrome", "The Jester", "The Likes of Us", "Afro-Glo Hair and Beauty Salon", 
     "NC: Collective", "bold - Bringing Out Leaders in Dementia", "Recalibrate Together", "Le Petit Monde Stories", 
@@ -72,7 +73,10 @@ TARGET_ORGANISATIONS = [
     "ACTive INquiry", "All Cleaned Up", "All Together Edinburgh", "Assist Social Capital", "Balerno Village Trust", "Bare Branding", 
     "BE United", "Best Bib n Tucker", "Bike For Good", "Blossom Wellbeing", "Bold Studio", "Breadshare", "Bro Enterprise", 
     "Caledonia Cremation", "Caledonian Foundation", "Caring Christmas Trees", "CCI Enterprises", "Coorie Catering", 
-    "Changeworks Recycling", "Circle", "Citadel Youth Centre", "Citizens Advice Edinburgh", "Columcille", "Community Alliance Trust", 
+    "Changeworks Recycling", "Circle", "Citadel Youth Centre", "Citizens Advice Edinburgh", "Columcille", "Community Alliance Trust"
+]
+# --- TARGET ORGANISATIONS LIST (PART 2 OF 2) ---
+TARGET_ORGANISATIONS += [
     "Cornerstone", "Cre8te Opportunities Limited", "Crossing Countries", "Cyan Clayworks", "Cyrenians", "DigiTechtive Ltd", 
     "Diverse Recruitment Scotland", "Duncan Place", "Wheatley Group", "Eden Project", "Edinburgh Badminton Academy", 
     "Edinburgh Blues Club", "Edinburgh Community Food", "Edinburgh Festival of Cycling Ltd", "Edinburgh Forge CIC", 
@@ -101,8 +105,10 @@ TARGET_ORGANISATIONS = [
     "The Big Issue Scotland", "Edinburgh Palette", "Positive Changes", "Granton Project", "The Pitt", "TOPCLASS FOUNDATION", 
     "Work+Play", "Shore Psychology", "Rosemains Steading", "Selene Glow Limited", "Children First"
 ]
+
 def clean_string_comparison(name):
-    if not name: return ""
+    if not name:
+        return ""
     t = str(name).replace("("," ").replace(")"," ").replace("."," ").replace(","," ").replace("-"," ")
     for w in ["ltd","limited","trust","association","group","scotland","LTD","LIMITED","TRUST","ASSOCIATION","GROUP","SCOTLAND","cic","CIC"]:
         t = t.replace(w, " ")
@@ -110,88 +116,114 @@ def clean_string_comparison(name):
 
 def get_profile_bio(url):
     try:
-        time.sleep(0.5)
+        time.sleep(1)
         r = requests.get(url, headers=HEADERS, timeout=10)
         if r.status_code == 200:
             s = BeautifulSoup(r.text, "html.parser")
             p = s.find(id="about-organisation") or s.find(class_=re.compile(r"about-org|organisation-profile|employer-bio"))
-            if p: return " ".join(p.text.strip().split())
+            if p:
+                return " ".join(p.text.strip().split())
             for h in s.find_all(["h4", "h5", "h3", "h2"]):
                 if "about" in h.text.lower() and h.find_next_sibling():
                     return " ".join(h.find_next_sibling().text.strip().split())
-    except: pass
+    except:
+        pass
     return "Profile overview available on the Goodmoves vacancy portal."
-
 def scrape_job_board():
-       t_set = {clean_string_comparison(name) for name in TARGET_ORGANISATIONS if name.strip()}
-    jobs, seen_ids = list(), set()
+    target_set = {clean_string_comparison(name) for name in TARGET_ORGANISATIONS if name.strip()}
+    print(f"Loaded {len(target_set)} unique target organizations from memory.")
+    unique_scraped_jobs = list()
+    processed_vacancy_ids = set()
 
     for page in range(1, 21):
         print(f"Reading Page {page}...")
+        payload = {"regions": "edinburgh-lothians", "page": page, "sort": "newest"}
         try:
-            r = requests.get(BASE_SEARCH_URL + "/search", headers=HEADERS, params={"regions":"edinburgh-lothians","page":page,"sort":"newest"}, timeout=10)
-            if r.status_code != 200: break
-        except: break
+            r = requests.get(BASE_SEARCH_URL + "/search", headers=HEADERS, params=payload, timeout=10)
+            if r.status_code != 200:
+                break
+        except:
+            break
 
         soup = BeautifulSoup(r.text, "html.parser")
         cards = soup.find_all(class_=re.compile(r"search-result|mdc-card")) or soup.find_all("div", class_="search-result")
 
         for card in cards:
             link = card.find("a", href=re.compile(r"/vacancy/"))
-            if not link: continue
+            if not link:
+                continue
             
             raw_href = link.get("href", "").split("?")[0].strip()
             v_match = re.search(r'/vacancy/([^/\s]+)', raw_href)
-            if not v_match: continue
+            if not v_match:
+                continue
             
             v_id = v_match.group(1).strip()
-            if v_id in seen_ids: continue
+            if v_id in processed_vacancy_ids:
+                continue
 
             title = link.text.strip()
-            if not title or any(x in title.lower() for x in ["find out more", "top job!"]): continue
+            if not title or any(x in title.lower() for x in ["find out more", "top job!"]):
+                continue
 
-            # Employer Tag Isolation
+            job_link = f"https://goodmoves.org{v_id}"
+
             tag = card.find(class_=re.compile(r"organisation|employer|subtitle|author")) or card.find("span", class_="mdc-typography--subtitle2")
             if not tag:
                 for l in card.find_all("a"):
                     if "/vacancy/" not in l.get("href", "") and l.text.strip():
-                        tag = l; break
+                        tag = l
+                        break
             
             emp = tag.text.strip() if tag else "Unknown"
             emp_clean = clean_string_comparison(emp)
-            if "children first" in clean_string_comparison(card.get_text()): emp_clean = "children first"
+            
+            if "children first" in clean_string_comparison(card.get_text()):
+                emp_clean = "children first"
 
-            if emp_clean in t_set:
-            matched = next(o for o in TARGET_ORGANISATIONS if clean_string_comparison(o) == emp_clean)
-                print(f"🎯 Match: '{title}' by '{matched}'")
-                seen_ids.add(v_id)
+            if emp_clean in target_set:
+                matched = "Unknown"
+                for o in TARGET_ORGANISATIONS:
+                    if clean_string_comparison(o) == emp_clean:
+                        matched = o
+                        break
+                        
+                print(f"🎯 Match Discovered: '{title}' by '{matched}'")
+                processed_vacancy_ids.add(v_id)
 
-                # Safe Date Parsing
                 c_date = "N/A"
                 for li in card.find_all("li"):
                     if "closing" in li.text.lower():
-                        c_date = li.text.strip(); break
+                        c_date = li.text.strip()
+                        break
                 if c_date == "N/A":
                     dm = re.search(r'(?i)closing\s+[^a-z0-9]*(\d+\s+[a-z]+|[a-z]+\s+\d+)', " ".join(card.get_text(" ").split()))
-                    if dm: c_date = dm.group(1).strip()
+                    if dm:
+                        c_date = dm.group(0).strip()
 
                 num_date = convert_date_to_numerical(c_date)
-                full_link = f"https://goodmoves.org{v_id}"
-                bio = get_profile_bio(full_link)
-                if len(bio) > 350: bio = bio[:350] + "..."
+                bio = get_profile_bio(job_link)
+                if len(bio) > 350:
+                    bio = bio[:350] + "..."
 
-                jobs.append({"org": matched, "title": title, "date": num_date, "link": full_link, "bio": bio})
+                unique_scraped_jobs.append({
+                    "org": matched, "title": title, "date": num_date, "link": job_link, "bio": bio
+                })
         time.sleep(0.1)
 
-    # Export Social Format
-    with open("active_jobs_social.txt", "w", encoding="utf-8") as f:
-        for j in jobs:
-            f.write(f"Organisation Name\n{j['org']}\n\nJob Title (Closing Day/Month)\n{j['title']} ({j['date']})\n\nOrganisation biography\n{j['bio']}\n" + "="*40 + "\n\n")
+    try:
+        with open("active_jobs_social.txt", "w", encoding="utf-8") as f:
+            for j in unique_scraped_jobs:
+                f.write(f"Organisation Name\n{j['org']}\n\nJob Title (Closing Day/Month)\n{j['title']} ({j['date']})\n\nOrganisation biography\n{j['bio']}\n" + "="*40 + "\n\n")
+    except Exception as e:
+        print(f"Social file error: {e}")
 
-    # Export Website Layout
-    with open("active_jobs_website.txt", "w", encoding="utf-8") as f:
-        for j in jobs:
-            f.write(f"{j['org']} - {j['title']} ({j['date']}) - <a href=\"{j['link']}\" target=\"_blank\" rel=\"noopener noreferrer\">Apply Here</a>\n\n{j['bio']}\n" + "-"*40 + "\n\n")
+    try:
+        with open("active_jobs_website.txt", "w", encoding="utf-8") as f:
+            for j in unique_scraped_jobs:
+                f.write(f"{j['org']} - {j['title']} ({j['date']}) - <a href=\"{j['link']}\" target=\"_blank\" rel=\"noopener noreferrer\">Apply Here</a>\n\n{j['bio']}\n" + "-"*40 + "\n\n")
+    except Exception as e:
+        print(f"Website file error: {e}")
 
 if __name__ == "__main__":
     scrape_job_board()
